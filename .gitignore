@@ -1,7 +1,43 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
-.DS_Store
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+
+# uv
+.uv-cache/
+
+# Auth — NIGDY nie commitować
 storage_state.json
 .notebooklm/
+chrome_profile_*/
+*.cookies
+*.session
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Generated artifacts (test outputs)
+*.mp3
+*.mp4
+*.pptx
+*.pdf
+*.png
+*.jpg
+!docs/**/*.png
+!docs/**/*.jpg
+
+# Local dev
 .env
+.env.local
+*.local

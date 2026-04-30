@@ -1,532 +1,152 @@
-# NotebookLM MCP for Claude (Desktop & CLI)
+# NotebookLM MCP — Claude Code, Claude Desktop, Cursor, Cline, Continue
 
-A powerful MCP (Model Context Protocol) server that brings Google NotebookLM into Claude Desktop and Claude Code.
+> Sterowanie Google NotebookLM z dowolnego klienta MCP. **Zero ręcznego loginu** — wykorzystuje sesję Twojego Chrome'a.
+>
+> Fork [alfredang/notebooklm-mcp](https://github.com/alfredang/notebooklm-mcp) z 12 dodatkowymi narzędziami, auto-refresh cookies i naprawami zgodności z `notebooklm-py>=0.3.4`.
 
-## Features
+## Co potrafi
 
-- **Research**: List and create notebooks
-- **Content**: Add URLs, text, and files as sources
-- **Generation**: Create Podcasts, Videos, Slides, Mind Maps, Infographics, Quizzes, Flashcards, and Reports
-- **Natural Interaction**: Chat directly with your sources using Claude's reasoning
+**27 narzędzi MCP:**
+
+| Kategoria | Narzędzia |
+|---|---|
+| 📓 Notebooki | `list_notebooks` · `create_notebook` · `get_notebook_summary` |
+| 📥 Źródła | `add_source_url` · `add_source_file` (PDF/DOCX/MD/TXT) · `add_source_text` · `add_source_drive` |
+| 💬 Q&A | `ask_notebook` (z citations ze źródeł) |
+| 🎙️ Generowanie | `generate_audio_overview` (podcast) · `generate_video_overview` · `generate_slide_deck` · `generate_mind_map` · `generate_infographic` · `generate_quiz` · `generate_flashcards` · `generate_summary_report` · `generate_data_table` |
+| 💾 Pobieranie | `download_audio/video/slide_deck/mind_map/infographic/quiz/flashcards/report/data_table` |
+| ⏳ Utility | `wait_for_completion` |
+
+## Co odróżnia od upstream
+
+- **Cookies-from-Chrome bypass** — pobiera sesję Google z Twojego Chrome'a (skrypt `scripts/import_chrome_cookies.py`). Zero Playwright login, zero osobnego profilu.
+- **Lazy server + auto-refresh + per-call retry** — gdy Google zrotuje cookies, MCP sam pobiera świeże i ponawia. Bez restartu Claude Code.
+- **+12 narzędzi** vs 15 w upstream (źródła plików/Drive, 9× download, wait utility).
+- **3 bug fixy** zgodności z aktualnym `notebooklm-py>=0.3.4` (`sources_count`, `AskResult.answer/references`, wymagane params w `generate_infographic`).
+
+Pełna lista zmian: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## Prerequisites
+## Wymagania
 
-### 1. Install uv (Python Package Manager)
+| Wymóg | Komentarz |
+|---|---|
+| **macOS** | Skrypt cookies używa Keychain do decrypt Chrome cookies (Linux/Windows na razie nie) |
+| **Chrome zalogowany w Google** | + dostęp do https://notebooklm.google.com (free lub Plus) |
+| **uv** | Python package manager — `brew install uv` lub `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **Klient MCP** | Claude Code / Claude Desktop / Cursor / Cline / Continue |
 
-<details>
-<summary><strong>macOS / Linux</strong></summary>
+---
 
-```bash
-# Using curl
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Or with Homebrew (macOS)
-brew install uv
-```
-
-Default install location: `~/.local/bin/uv`
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-```powershell
-# Using PowerShell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Or with Scoop
-scoop install uv
-
-# Or with winget
-winget install --id=astral-sh.uv -e
-```
-
-Default install location: `%USERPROFILE%\.local\bin\uv.exe`
-
-</details>
-
-Verify installation:
-```bash
-uv --version
-```
-
-### 2. Clone and Install Dependencies
+## Instalacja — 4 komendy
 
 ```bash
-# Clone the repository
-git clone https://github.com/alfredang/notebooklm-mcp.git
+# 1. Sklonuj
+git clone https://github.com/studiogo/notebooklm-mcp ~/Documents/Projekty/notebooklm-mcp
+cd ~/Documents/Projekty/notebooklm-mcp
 
-# Navigate to the project folder
-cd notebooklm-mcp
-
-# Install dependencies (includes notebooklm-py and fastmcp)
+# 2. Zainstaluj zależności
 uv sync
+
+# 3. Pobierz cookies sesji z Twojego Chrome (raz, akceptuj Keychain prompt)
+uv run python scripts/import_chrome_cookies.py
+
+# 4. Test (lista Twoich notebooków)
+uv run notebooklm list
 ```
 
-This will:
-- Create a `.venv` virtual environment
-- Install **notebooklm-py** (Python client for NotebookLM API)
-- Install **fastmcp** (MCP server framework)
+Jeśli `notebooklm list` wylistuje Twoje notebooki — auth działa. Pora podpiąć MCP do klienta.
 
-> **Note:** These dependencies are required for both Claude Desktop and Claude Code.
+## Podłączenie do klienta MCP
 
----
+Pełne instrukcje per klient: [INSTALL.md](INSTALL.md).
 
-## Step 1: Authenticate with NotebookLM
-
-NotebookLM uses browser-based authentication. You must login once to save your session cookies.
-
+**Claude Code (skrót):**
 ```bash
-cd notebooklm-mcp
-uv run notebooklm login
+claude mcp add notebooklm -- uv --directory ~/Documents/Projekty/notebooklm-mcp run python server.py
 ```
 
-**What happens:**
-1. A browser window will open automatically
-2. Log in to your Google account
-3. Navigate to NotebookLM if not redirected automatically
-4. Wait until the terminal displays **"Success"**
-5. Close the browser
-
-**Verify authentication:**
-```bash
-uv run python -c "
-from notebooklm import NotebookLMClient
-import asyncio
-async def test():
-    client = await NotebookLMClient.from_storage()
-    async with client:
-        notebooks = await client.notebooks.list()
-        print(f'Authenticated! Found {len(notebooks)} notebooks.')
-asyncio.run(test())
-"
-```
-
-You should see: `Authenticated! Found X notebooks.`
-
----
-
-## Step 2: Test the MCP Server
-
-Before configuring Claude, verify the server starts correctly:
-
-```bash
-cd notebooklm-mcp
-uv run python server.py
-```
-
-**Expected output:**
-```
-Starting NotebookLM MCP server...
-NotebookLM client initialized successfully
-Starting MCP server 'NotebookLM' with transport 'stdio'
-```
-
-Press `Ctrl+C` (or `Cmd+C` on Mac) to stop the server after confirming it works.
-
----
-
-## Step 3: Setup for Claude Desktop
-
-### 3.1 Find Your Paths
-
-You'll need two paths for the configuration:
-
-**Find your `uv` path:**
-
-<details>
-<summary><strong>macOS / Linux</strong></summary>
-
-```bash
-which uv
-```
-Example output: `/Users/yourname/.local/bin/uv`
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-```powershell
-where uv
-```
-Example output: `C:\Users\yourname\.local\bin\uv.exe`
-
-</details>
-
-**Find your project path:**
-
-<details>
-<summary><strong>macOS / Linux</strong></summary>
-
-```bash
-cd notebooklm-mcp && pwd
-```
-Example output: `/Users/yourname/projects/notebooklm-mcp`
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-```powershell
-cd notebooklm-mcp; (Get-Location).Path
-```
-Example output: `C:\Users\yourname\projects\notebooklm-mcp`
-
-</details>
-
-### 3.2 Open the Config File
-
-**From Claude Desktop (Recommended):**
-
-1. Open Claude Desktop
-2. Go to **Settings** (gear icon) → **Developer** → **Edit Config**
-3. This opens `claude_desktop_config.json` in your default editor
-
-**Or manually:**
-
-<details>
-<summary>macOS path</summary>
-
-`~/Library/Application Support/Claude/claude_desktop_config.json`
-
-</details>
-
-<details>
-<summary>Windows path</summary>
-
-`%APPDATA%\Claude\claude_desktop_config.json`
-
-</details>
-
-### 3.3 Add the MCP Server Configuration
-
-> **Important:** Replace `<UV_PATH>` and `<PROJECT_PATH>` with your actual paths from Step 3.1
-
-<details>
-<summary><strong>macOS / Linux Configuration</strong></summary>
-
+**Claude Desktop:** edycja `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "notebooklm": {
-      "command": "<UV_PATH>",
-      "args": [
-        "--directory",
-        "<PROJECT_PATH>",
-        "run",
-        "python",
-        "server.py"
-      ]
+      "command": "uv",
+      "args": ["--directory", "/Users/TWOJ_USER/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"]
     }
   }
 }
 ```
 
-**Example with real paths:**
-```json
-{
-  "mcpServers": {
-    "notebooklm": {
-      "command": "/Users/yourname/.local/bin/uv",
-      "args": [
-        "--directory",
-        "/Users/yourname/projects/notebooklm-mcp",
-        "run",
-        "python",
-        "server.py"
-      ]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><strong>Windows Configuration</strong></summary>
-
-```json
-{
-  "mcpServers": {
-    "notebooklm": {
-      "command": "<UV_PATH>",
-      "args": [
-        "--directory",
-        "<PROJECT_PATH>",
-        "run",
-        "python",
-        "server.py"
-      ]
-    }
-  }
-}
-```
-
-**Example with real paths:**
-```json
-{
-  "mcpServers": {
-    "notebooklm": {
-      "command": "C:\\Users\\yourname\\.local\\bin\\uv.exe",
-      "args": [
-        "--directory",
-        "C:\\Users\\yourname\\projects\\notebooklm-mcp",
-        "run",
-        "python",
-        "server.py"
-      ]
-    }
-  }
-}
-```
-
-> **Note:** On Windows, use double backslashes (`\\`) in JSON paths.
-
-</details>
-
-### 3.4 Restart Claude Desktop
-
-| Platform | How to Restart |
-|----------|----------------|
-| **macOS** | Press `Cmd+Q` to fully quit, then reopen |
-| **Windows** | Right-click tray icon → Quit, then reopen |
-
-Look for the **hammer icon** in the chat input area - this indicates MCP tools are available.
-
-### 3.5 Verify Connection
-
-In Claude Desktop, type:
-```
-List my NotebookLM notebooks
-```
-
-Claude should use the `list_notebooks` tool and display your notebooks.
+Po restarcie klienta — narzędzia `mcp__notebooklm__*` są dostępne.
 
 ---
 
-## Step 4: Setup for Claude Code (CLI)
+## Use case — Audio Overview po polsku
 
-> **Prerequisites:** Complete Steps 1-2 first (install dependencies with `uv sync` and authenticate with `uv run notebooklm login`).
+```
+Ty: zrób mi notebook "Trendy AI 2026", znajdź 8 źródeł i wrzuć je tam,
+    potem zrób z tego podcast po polsku 12-15 min.
 
-### 4.1 Add the MCP Server
-
-Replace `<PROJECT_PATH>` with your actual project path:
-
-<details>
-<summary><strong>macOS / Linux</strong></summary>
-
-```bash
-claude mcp add notebooklm -- uv --directory <PROJECT_PATH> run python server.py
+Claude:
+  1. WebSearch → 15 wyników
+  2. filtruje top 8
+  3. mcp__notebooklm__create_notebook("Trendy AI 2026")
+  4. pętla mcp__notebooklm__add_source_url × 8
+  5. mcp__notebooklm__generate_audio_overview(language="pl", instructions="...")
+  6. mcp__notebooklm__wait_for_completion (~3 min)
+  7. mcp__notebooklm__download_audio("~/Desktop/podcast.mp3")
+  → masz gotowy 13-min podcast 2-osobowy AI w pliku MP3
 ```
 
-**Example:**
-```bash
-claude mcp add notebooklm -- uv --directory /Users/yourname/projects/notebooklm-mcp run python server.py
-```
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-```powershell
-claude mcp add notebooklm -- uv --directory <PROJECT_PATH> run python server.py
-```
-
-**Example:**
-```powershell
-claude mcp add notebooklm -- uv --directory C:\Users\yourname\projects\notebooklm-mcp run python server.py
-```
-
-</details>
-
-### 4.2 Verify the Server is Added
-
-```bash
-claude mcp list
-```
-
-You should see `notebooklm` in the list.
-
-### 4.3 Test in Claude Code
-
-Start a new Claude Code session:
-```bash
-claude
-```
-
-Then ask:
-```
-List my NotebookLM notebooks
-```
+Inne praktyczne flow:
+- **SmartLetter podcast** — 5 newsów dnia → notebook → Audio Overview → automatyczny podcast bez nagrywania
+- **Lekcja kursu** — skrypt + materiały → mind_map + quiz + flashcards → eksport
+- **Brand Brain** — komplet researchu marki → ask z citations + briefing
+- **Research konkurencji** — 10 stron + 5 YT + 3 PDF → cytowane odpowiedzi z całości
 
 ---
 
-## Usage Examples
+## Refresh cookies (gdy MCP zwraca auth error)
 
-Once configured, use natural language commands in Claude Desktop or Claude Code:
+Auto-refresh w server.py łapie większość przypadków. Gdy nie pomaga (np. Google wymaga 2FA re-auth):
 
-| Task | Example Command |
-|------|-----------------|
-| List notebooks | "Show me all my NotebookLM notebooks" |
-| Create notebook | "Create a new notebook called 'Research Project'" |
-| Add URL source | "Add this URL to my notebook: https://example.com/article" |
-| Generate podcast | "Generate a podcast for notebook ID xyz123" |
-| Create slides | "Make a slide deck from my 'Research Project' notebook" |
-| Generate mind map | "Create a mind map for notebook abc456" |
-| Create quiz | "Generate a quiz based on my notebook sources" |
-| Make flashcards | "Create study flashcards from this notebook" |
+```bash
+cd ~/Documents/Projekty/notebooklm-mcp
+uv run python scripts/import_chrome_cookies.py
+# w kliencie MCP: /mcp reconnect notebooklm   (Claude Code)
+# albo restart klienta (inne)
+```
 
----
-
-## Available Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_notebooks` | List all notebooks in your account |
-| `create_notebook` | Create a new notebook |
-| `add_source_url` | Add a website URL as a source |
-| `add_source_text` | Add raw text as a source |
-| `ask_notebook` | Ask a question based on notebook sources |
-| `get_notebook_summary` | Get summary and key insights |
-| `generate_audio_overview` | Generate a podcast-style audio |
-| `generate_video_overview` | Generate a video overview |
-| `generate_slide_deck` | Generate PowerPoint-style slides |
-| `generate_mind_map` | Generate an interactive mind map |
-| `generate_infographic` | Generate a visual infographic |
-| `generate_quiz` | Generate quiz questions |
-| `generate_flashcards` | Generate study flashcards |
-| `generate_summary_report` | Generate a briefing document |
-| `generate_data_table` | Extract data into a table |
+Cookies normalnie żyją tygodniami.
 
 ---
 
 ## Troubleshooting
 
-### "Server disconnected" or "Failed to spawn process"
+**`Authentication expired or invalid`** — odpal `import_chrome_cookies.py`. Jeśli nie pomaga, sprawdź czy Chrome ma aktywną sesję NotebookLM (otwórz https://notebooklm.google.com w przeglądarce).
 
-**Cause**: Claude Desktop can't find `uv` because it doesn't inherit your shell's PATH.
+**`No SID cookie found`** — żaden z profili Chrome nie ma zalogowanej sesji Google. Zaloguj się w Chrome do konta z dostępem do NotebookLM, odpal skrypt ponownie.
 
-**Solution**: Use the **full absolute path** to `uv` in the config (see Step 3.1).
+**`Generation failed - no artifact_id returned`** — typowo brak wymaganych parametrów (zwłaszcza w `generate_infographic`: `orientation` + `detail_level`). Sprawdź też czy Twój notebook ma źródła (puste notebooki nic nie wygenerują).
 
----
+**MCP server nie startuje** — `uv sync` w katalogu repo. Sprawdź `python --version` (wymagane >=3.13). Sprawdź `which uv`.
 
-### "Command not found: uv"
-
-<details>
-<summary><strong>macOS / Linux</strong></summary>
-
-Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Then reload:
-```bash
-source ~/.zshrc  # or source ~/.bashrc
-```
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-Add to your PATH:
-1. Open System Properties → Environment Variables
-2. Under "User variables", edit `Path`
-3. Add: `%USERPROFILE%\.local\bin`
-4. Restart your terminal
-
-</details>
+**Wywala `'Notebook' object has no attribute 'X'`** — pakiet `notebooklm-py` zmienił API. Update: `uv lock --upgrade-package notebooklm-py && uv sync`. Jeśli problem zostaje, otwórz issue.
 
 ---
 
-### MCP Server Not Appearing in Claude Desktop
+## Atrybucja
 
-**Cause**: Invalid JSON in config file or Claude not restarted properly.
+- **Upstream:** [alfredang/notebooklm-mcp](https://github.com/alfredang/notebooklm-mcp) — bazowa struktura MCP wrappera
+- **Pakiet pod spodem:** [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) — reverse-engineered klient NotebookLM RPC
+- **Cookies bypass:** [borisbabic/browser_cookie3](https://github.com/borisbabic/browser_cookie3)
 
-**Solution**:
-1. Validate your JSON at https://jsonlint.com/
-2. Ensure no trailing commas in the JSON
-3. Fully quit and reopen Claude Desktop
+## Licencja
 
----
-
-### "NotebookLM client not initialized"
-
-**Cause**: Server started before authentication was complete.
-
-**Solution**:
-1. Run `uv run notebooklm login` first
-2. Restart Claude Desktop or re-add the MCP server in Claude Code
+[MIT](LICENSE) — bezpłatne komercyjne i prywatne użytkowanie.
 
 ---
 
-### Check Claude Desktop Logs
-
-<details>
-<summary><strong>macOS</strong></summary>
-
-```bash
-# View recent logs
-tail -100 ~/Library/Logs/Claude/mcp*.log
-
-# Or open in Finder
-open ~/Library/Logs/Claude/
-```
-
-</details>
-
-<details>
-<summary><strong>Windows</strong></summary>
-
-```powershell
-# View logs folder
-explorer "$env:APPDATA\Claude\logs"
-```
-
-</details>
-
----
-
-### Remove and Re-add MCP Server (Claude Code)
-
-If issues persist:
-```bash
-claude mcp remove notebooklm
-claude mcp add notebooklm -- uv --directory <PROJECT_PATH> run python server.py
-```
-
----
-
-## Updating
-
-To update the NotebookLM library:
-```bash
-cd notebooklm-mcp
-uv sync --upgrade
-```
-
----
-
-## Project Structure
-
-```
-notebooklm-mcp/
-├── server.py          # MCP server implementation
-├── pyproject.toml     # Project dependencies
-├── README.md          # This file
-├── SKILL.md           # Claude Code skill definition
-└── .venv/             # Virtual environment (auto-created)
-```
-
----
-
-## License
-
-MIT License
+**Autor forka:** [Łukasz Hodorowicz](https://lukaszhodorowicz.pl) — [Ogarniam AI](https://ogarniamai.pl)

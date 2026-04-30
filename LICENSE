@@ -1,0 +1,34 @@
+MIT License
+
+Copyright (c) 2026 Łukasz Hodorowicz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Attribution
+
+This project is a fork of [alfredang/notebooklm-mcp](https://github.com/alfredang/notebooklm-mcp)
+(MIT License) and is built on top of [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py)
+(MIT License, Copyright (c) 2026 Teng Lin).
+
+Substantial modifications: rewrite of MCP server to lazy initialization with
+auto-refresh authentication, cookies-from-Chrome bypass (eliminating Playwright
+login), 12 additional MCP tools (file/Drive sources + 9 artifact downloads +
+wait utility), and bug fixes against current `notebooklm-py>=0.3.4` API.
