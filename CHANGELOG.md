@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## v1.1.0 — 2026-05-09
+
+### Cross-platform installation (Windows + Linux support)
+
+#### Nowe — `scripts/login_interactive.py`
+- Playwright headless login uniwersalny dla wszystkich OS
+- Otwiera okno Chromium → user loguje się ręcznie (login + hasło + 2FA) → skrypt eksportuje cookies
+- Auto-detekcja zalogowania (czeka na URL `notebooklm.google.com/**`)
+- Walidacja `SID` cookie po zapisie
+- Output: `~/.notebooklm/storage_state.json` (zgodny z istniejącym auth flow)
+
+#### Cross-platform paths w `scripts/import_chrome_cookies.py`
+- Funkcja `chrome_base_dir()` z rozgałęzieniem na `sys.platform`:
+  - macOS: `~/Library/Application Support/Google/Chrome` (jak dotąd)
+  - Windows: `%LOCALAPPDATA%\Google\Chrome\User Data` (z fallbackiem `~/AppData/Local`)
+  - Linux: `~/.config/google-chrome` → `google-chrome-stable` → `chromium` (try-fallback)
+- Przyjazny error gdy katalog Chrome nie istnieje — wskazuje `login_interactive.py` jako alternatywę
+
+#### Dokumentacja
+- `README.md` — tabela kompatybilności OS × metoda auth + osobne sekcje instalacji per OS (macOS/Windows/Linux)
+- `INSTALL.md` — pełne instrukcje per OS + per klient MCP, z poprawnymi ścieżkami konfiguracji (Windows: `%APPDATA%`, Linux: `~/.config`)
+- `.env.example` — dokumentacja `NOTEBOOKLM_HOME` + `NOTEBOOKLM_AUTH_JSON` (CI/Docker)
+
+#### Zależności
+- `pyproject.toml` — nowy optional extra `playwright` (`uv sync --extra playwright`)
+- `playwright>=1.40` jako dependency tej extra
+- Zaktualizowany `description` (cross-platform zamiast macOS-only)
+
+### Bug fix — server.py auth retry
+- Rozszerzony filtr w `call_with_retry()` o keywords `null result`, `null data`, `rpc` — łapie więcej przypadków wygaśnięcia sesji RPC notebooklm-py
+
+### Migracja v1.0.0 → v1.1.0
+Bezbolesna — istniejący macOS users nadal używają `import_chrome_cookies.py` bez zmian. Storage path (`~/.notebooklm/storage_state.json`) niezmieniony — żaden re-auth nie jest potrzebny.
+
+---
+
 ## v1.0.0 — 2026-04-30
 
 Pierwszy release forka. Zmiany względem [alfredang/notebooklm-mcp](https://github.com/alfredang/notebooklm-mcp) (upstream).

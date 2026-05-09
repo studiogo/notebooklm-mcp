@@ -1,7 +1,7 @@
 [project]
 name = "notebooklm-mcp"
-version = "1.0.0"
-description = "MCP server bridging Google NotebookLM with Claude Code/Desktop, Cursor, Cline, Continue. Cookies-from-Chrome bypass, auto-refresh, 27 tools."
+version = "1.1.0"
+description = "MCP server bridging Google NotebookLM with Claude Code/Desktop, Cursor, Cline, Continue. Cross-platform auth (macOS/Windows/Linux), auto-refresh, 27 tools."
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "Łukasz Hodorowicz"}]
@@ -11,6 +11,11 @@ dependencies = [
     "fastmcp>=2.14.4",
     "notebooklm-py[browser]>=0.3.4",
 ]
+
+[project.optional-dependencies]
+# Playwright headless login — wymagane na Windows/Linux (gdzie cookies-from-Chrome zawodzi).
+# Instalacja: `uv sync --extra playwright && uv run playwright install chromium`
+playwright = ["playwright>=1.40"]
 
 [project.urls]
 Homepage = "https://github.com/studiogo/notebooklm-mcp"

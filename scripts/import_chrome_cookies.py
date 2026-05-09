@@ -3,6 +3,13 @@
 
 Skanuje wszystkie profile Chrome, znajduje ten z aktywną sesją NotebookLM,
 eksportuje cookies w formacie Playwright storage_state.
+
+Wsparcie OS:
+- macOS: pełne (Keychain decrypt cookies automatycznie)
+- Windows: częściowe (browser_cookie3 używa DPAPI — działa, ale czasem zawodzi)
+- Linux: wymaga GNOME Keyring / KWallet (przez secretstorage)
+
+Jeżeli skrypt nie zadziała na Twoim OS — użyj `login_interactive.py` (Playwright).
 """
 import argparse
 import json
@@ -13,13 +20,36 @@ from pathlib import Path
 
 import browser_cookie3
 
-CHROME_BASE = Path.home() / "Library/Application Support/Google/Chrome"
+
+def chrome_base_dir():
+    """Cross-platform Chrome user data directory."""
+    home = Path.home()
+    if sys.platform == "darwin":
+        return home / "Library/Application Support/Google/Chrome"
+    elif sys.platform == "win32":
+        local_appdata = os.environ.get("LOCALAPPDATA", str(home / "AppData/Local"))
+        return Path(local_appdata) / "Google/Chrome/User Data"
+    else:  # linux + other unix
+        for candidate in ("google-chrome", "google-chrome-stable", "chromium"):
+            p = home / ".config" / candidate
+            if p.exists():
+                return p
+        return home / ".config/google-chrome"
+
+
+CHROME_BASE = chrome_base_dir()
 NEEDED_DOMAINS = {".google.com", "notebooklm.google.com", ".notebooklm.google.com"}
 REQUIRED_COOKIE = "SID"
-STORAGE_PATH = Path.home() / ".notebooklm/storage_state.json"
+STORAGE_PATH = Path.home() / ".notebooklm" / "storage_state.json"
 
 
 def list_profiles():
+    if not CHROME_BASE.exists():
+        print(f"❌ Chrome user data directory not found: {CHROME_BASE}", file=sys.stderr)
+        print(f"   OS: {sys.platform}. Sprawdź czy Chrome jest zainstalowany w domyślnej lokalizacji.",
+              file=sys.stderr)
+        print(f"   Alternatywa: użyj `login_interactive.py` (Playwright login).", file=sys.stderr)
+        sys.exit(1)
     return sorted([p.name for p in CHROME_BASE.iterdir()
                    if p.is_dir() and (p.name == "Default" or p.name.startswith("Profile"))])
 

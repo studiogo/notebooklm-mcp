@@ -1,12 +1,29 @@
-# INSTALL — pełna instalacja per klient MCP
+# INSTALL — pełna instalacja per OS i klient MCP
 
-## Pre-requirements
+## Wybór ścieżki auth — które rozwiązanie dla Ciebie?
 
-- macOS (na razie tylko)
-- Chrome z zalogowaną sesją Google + dostęp do https://notebooklm.google.com
-- `uv` — `brew install uv` lub `curl -LsSf https://astral.sh/uv/install.sh | sh`
+| OS | Rekomendowana metoda | Alternatywa |
+|---|---|---|
+| **macOS** | `import_chrome_cookies.py` (Keychain — zero loginu) | `login_interactive.py` (Playwright) |
+| **Windows** | `login_interactive.py` (Playwright — najpewniejsze) | `import_chrome_cookies.py` (DPAPI — czasem zawodzi) |
+| **Linux** | `login_interactive.py` (Playwright) | `import_chrome_cookies.py` (wymaga GNOME Keyring/KWallet) |
 
-## Kroki bazowe (raz, niezależne od klienta)
+---
+
+## A) Pre-requirements wspólne
+
+- **Chrome zalogowany w Google** + dostęp do https://notebooklm.google.com
+- **Python ≥ 3.13** (zalecany przez `pyproject.toml`)
+- **`uv`** — Python package manager:
+  - macOS: `brew install uv` lub `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  - Windows: `powershell -c "irm https://astral.sh/uv/install.ps1 | iex"`
+  - Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+
+---
+
+## B) Instalacja — kroki bazowe
+
+### macOS
 
 ```bash
 # 1. Sklonuj
@@ -18,53 +35,104 @@ uv sync
 
 # 3. Pobierz cookies z Chrome (Keychain prompt → "Always Allow")
 uv run python scripts/import_chrome_cookies.py
+
+# 4. Test
+uv run notebooklm list
 ```
 
-**Sprawdź:** `uv run notebooklm list` powinno zwrócić Twoje notebooki.
+### Windows (PowerShell)
+
+```powershell
+# 1. Sklonuj (lokalizacja przykładowa — możesz zmienić)
+git clone https://github.com/studiogo/notebooklm-mcp $env:USERPROFILE\notebooklm-mcp
+cd $env:USERPROFILE\notebooklm-mcp
+
+# 2. Zainstaluj zależności + Playwright extra
+uv sync --extra playwright
+
+# 3. Zainstaluj browser dla Playwright (raz)
+uv run playwright install chromium
+
+# 4. Otwórz okno Chromium i zaloguj się ręcznie do NotebookLM
+uv run python scripts/login_interactive.py
+
+# 5. Test
+uv run notebooklm list
+```
+
+### Linux
+
+```bash
+# 1. Sklonuj
+git clone https://github.com/studiogo/notebooklm-mcp ~/notebooklm-mcp
+cd ~/notebooklm-mcp
+
+# 2. Zainstaluj zależności + Playwright extra
+uv sync --extra playwright
+
+# 3. Zainstaluj browser dla Playwright (raz)
+uv run playwright install chromium
+
+# 4. Otwórz okno Chromium i zaloguj się ręcznie
+uv run python scripts/login_interactive.py
+
+# 5. Test
+uv run notebooklm list
+```
+
+**Dla zaawansowanych Linux** — jeśli masz GNOME Keyring/KWallet i Chrome login:
+```bash
+uv run python scripts/import_chrome_cookies.py
+```
+Nie wymaga Playwright, ale czasem rzuca `secretstorage` error — wtedy fallback to `login_interactive.py`.
 
 ---
 
-## Podłączenie do klienta
+## C) Podłączenie do klienta MCP
 
-### A) Claude Code (CLI)
+### macOS / Linux — Claude Code (CLI)
 
 ```bash
+# macOS
 claude mcp add notebooklm -- uv --directory ~/Documents/Projekty/notebooklm-mcp run python server.py
+
+# Linux
+claude mcp add notebooklm -- uv --directory ~/notebooklm-mcp run python server.py
 ```
 
 W aktywnej sesji: `/mcp reconnect notebooklm`. Restart Claude Code nie jest potrzebny.
 
-**Alternatywa (ręczna edycja `~/.claude.json`):**
-```json
-{
-  "mcpServers": {
-    "notebooklm": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["--directory", "/Users/<USER>/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"]
-    }
-  }
-}
+### Windows — Claude Code (CLI)
+
+```powershell
+claude mcp add notebooklm -- uv --directory $env:USERPROFILE\notebooklm-mcp run python server.py
 ```
 
-### B) Claude Desktop
+### Claude Desktop
 
-Plik: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+**Linux:** `~/.config/Claude/claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "notebooklm": {
       "command": "uv",
-      "args": ["--directory", "/Users/<USER>/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"]
+      "args": ["--directory", "/PEŁNA/ŚCIEŻKA/DO/notebooklm-mcp", "run", "python", "server.py"]
     }
   }
 }
 ```
+
+Zamień `/PEŁNA/ŚCIEŻKA/DO/notebooklm-mcp` na realną:
+- macOS: `/Users/<USER>/Documents/Projekty/notebooklm-mcp`
+- Windows: `C:\\Users\\<USER>\\notebooklm-mcp` (uwaga na podwójne backslashe w JSON)
+- Linux: `/home/<USER>/notebooklm-mcp`
 
 Restart Claude Desktop.
 
-### C) Cursor
+### Cursor
 
 Cursor → Settings → Features → MCP → "Add Server":
 
@@ -73,22 +141,24 @@ Cursor → Settings → Features → MCP → "Add Server":
   "mcpServers": {
     "notebooklm": {
       "command": "uv",
-      "args": ["--directory", "/Users/<USER>/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"]
+      "args": ["--directory", "/PEŁNA/ŚCIEŻKA/DO/notebooklm-mcp", "run", "python", "server.py"]
     }
   }
 }
 ```
 
-### D) Cline (VSCode extension)
+### Cline (VSCode extension)
 
-Plik: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+**macOS:** `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
+**Windows:** `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+**Linux:** `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 
 ```json
 {
   "mcpServers": {
     "notebooklm": {
       "command": "uv",
-      "args": ["--directory", "/Users/<USER>/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"],
+      "args": ["--directory", "/PEŁNA/ŚCIEŻKA/DO/notebooklm-mcp", "run", "python", "server.py"],
       "disabled": false,
       "autoApprove": []
     }
@@ -98,9 +168,9 @@ Plik: `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-
 
 Restart VSCode.
 
-### E) Continue (VSCode/JetBrains extension)
+### Continue (VSCode/JetBrains)
 
-Plik: `~/.continue/config.json` — sekcja `mcpServers`:
+`~/.continue/config.json` (Linux/macOS) lub `%USERPROFILE%\.continue\config.json` (Windows) — sekcja `mcpServers`:
 
 ```json
 {
@@ -108,7 +178,7 @@ Plik: `~/.continue/config.json` — sekcja `mcpServers`:
     {
       "name": "notebooklm",
       "command": "uv",
-      "args": ["--directory", "/Users/<USER>/Documents/Projekty/notebooklm-mcp", "run", "python", "server.py"]
+      "args": ["--directory", "/PEŁNA/ŚCIEŻKA/DO/notebooklm-mcp", "run", "python", "server.py"]
     }
   ]
 }
@@ -118,7 +188,7 @@ Restart Continue.
 
 ---
 
-## Test — pierwsze wywołanie
+## D) Test — pierwsze wywołanie
 
 W kliencie:
 
@@ -130,13 +200,24 @@ Klient wywoła `mcp__notebooklm__list_notebooks` i zwróci tabelę. Jeśli widzi
 
 ---
 
-## Refresh cookies
+## E) Refresh cookies (gdy klient zwraca błąd auth)
 
-Gdy klient zwraca błąd auth (rotacja Google):
-
+### macOS
 ```bash
 cd ~/Documents/Projekty/notebooklm-mcp
 uv run python scripts/import_chrome_cookies.py
+```
+
+### Windows (PowerShell)
+```powershell
+cd $env:USERPROFILE\notebooklm-mcp
+uv run python scripts/login_interactive.py
+```
+
+### Linux
+```bash
+cd ~/notebooklm-mcp
+uv run python scripts/login_interactive.py
 ```
 
 Następnie:
@@ -147,7 +228,7 @@ Cookies normalnie żyją tygodniami. Auto-refresh w server.py łapie większoś�
 
 ---
 
-## Wsparcie wielu profili Chrome
+## F) Wsparcie wielu profili Chrome (tylko `import_chrome_cookies.py`)
 
 Skrypt automatycznie skanuje wszystkie profile (`Default`, `Profile 1`, `Profile 2`, ...) i wybiera ten z największą liczbą cookies `*.google.com`. Jeśli chcesz wymusić konkretny profil:
 
@@ -157,9 +238,13 @@ uv run python scripts/import_chrome_cookies.py --profile "Profile 3"
 
 ---
 
-## Pliki referencyjne
+## G) Pliki referencyjne
 
-- `~/.notebooklm/storage_state.json` — sesja (auto-refreshable, NIE commituj)
-- `~/Library/Caches/claude-cli-nodejs/-Users-<USER>/mcp-logs-notebooklm/*.jsonl` — logi MCP w Claude Code
-- `server.py` — definicje 27 narzędzi
-- `scripts/import_chrome_cookies.py` — bypass Playwright
+| Plik | Opis |
+|---|---|
+| `~/.notebooklm/storage_state.json` | Sesja (auto-refreshable, **NIE commituj**) |
+| `~/Library/Caches/claude-cli-nodejs/-Users-<USER>/mcp-logs-notebooklm/*.jsonl` | Logi MCP w Claude Code (macOS) |
+| `%LOCALAPPDATA%\claude-cli-nodejs\...\mcp-logs-notebooklm\` | Logi MCP (Windows) |
+| `server.py` | Definicje 27 narzędzi |
+| `scripts/import_chrome_cookies.py` | macOS-first auth (Keychain bypass) |
+| `scripts/login_interactive.py` | Cross-platform auth (Playwright headless login) |

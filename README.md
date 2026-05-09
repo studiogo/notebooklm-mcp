@@ -19,7 +19,7 @@
 
 ## Co odróżnia od upstream
 
-- **Cookies-from-Chrome bypass** — pobiera sesję Google z Twojego Chrome'a (skrypt `scripts/import_chrome_cookies.py`). Zero Playwright login, zero osobnego profilu.
+- **Cross-platform auth** — `import_chrome_cookies.py` (macOS — Keychain bypass, zero loginu) lub `login_interactive.py` (Windows/Linux — Playwright headless login z manualnym podaniem hasła).
 - **Lazy server + auto-refresh + per-call retry** — gdy Google zrotuje cookies, MCP sam pobiera świeże i ponawia. Bez restartu Claude Code.
 - **+12 narzędzi** vs 15 w upstream (źródła plików/Drive, 9× download, wait utility).
 - **3 bug fixy** zgodności z aktualnym `notebooklm-py>=0.3.4` (`sources_count`, `AskResult.answer/references`, wymagane params w `generate_infographic`).
@@ -32,14 +32,25 @@ Pełna lista zmian: [CHANGELOG.md](CHANGELOG.md).
 
 | Wymóg | Komentarz |
 |---|---|
-| **macOS** | Skrypt cookies używa Keychain do decrypt Chrome cookies (Linux/Windows na razie nie) |
+| **OS** | macOS / Windows / Linux — patrz tabela kompatybilności poniżej |
 | **Chrome zalogowany w Google** | + dostęp do https://notebooklm.google.com (free lub Plus) |
-| **uv** | Python package manager — `brew install uv` lub `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **Python ≥ 3.13** | `pyproject.toml` wymaga; sprawdź `python --version` |
+| **`uv`** | Python package manager — `brew install uv` (mac), `irm https://astral.sh/uv/install.ps1 \| iex` (Win), `curl -LsSf https://astral.sh/uv/install.sh \| sh` (Linux) |
 | **Klient MCP** | Claude Code / Claude Desktop / Cursor / Cline / Continue |
+
+### Kompatybilność OS × metoda auth
+
+| OS | Rekomendowana metoda | Dlaczego | Alternatywa |
+|---|---|---|---|
+| **macOS** | `import_chrome_cookies.py` | Keychain dekryptuje Chrome cookies automatycznie — zero loginu | `login_interactive.py` |
+| **Windows** | `login_interactive.py` (Playwright) | DPAPI dekryptcja Chrome jest niestabilna — Playwright login pewniejszy | `import_chrome_cookies.py` (jeśli zadziała) |
+| **Linux** | `login_interactive.py` (Playwright) | Brak Keychain, `secretstorage` zawodzi w wielu setupach | `import_chrome_cookies.py` (gdy GNOME Keyring) |
 
 ---
 
-## Instalacja — 4 komendy
+## Instalacja
+
+### macOS — 4 komendy
 
 ```bash
 # 1. Sklonuj
@@ -53,6 +64,37 @@ uv sync
 uv run python scripts/import_chrome_cookies.py
 
 # 4. Test (lista Twoich notebooków)
+uv run notebooklm list
+```
+
+### Windows — 5 komend (PowerShell)
+
+```powershell
+# 1. Sklonuj
+git clone https://github.com/studiogo/notebooklm-mcp $env:USERPROFILE\notebooklm-mcp
+cd $env:USERPROFILE\notebooklm-mcp
+
+# 2. Zainstaluj zależności + Playwright extra
+uv sync --extra playwright
+
+# 3. Zainstaluj browser dla Playwright (raz)
+uv run playwright install chromium
+
+# 4. Otwórz Chromium i zaloguj się ręcznie (login + hasło + 2FA)
+uv run python scripts/login_interactive.py
+
+# 5. Test
+uv run notebooklm list
+```
+
+### Linux — 5 komend
+
+```bash
+git clone https://github.com/studiogo/notebooklm-mcp ~/notebooklm-mcp
+cd ~/notebooklm-mcp
+uv sync --extra playwright
+uv run playwright install chromium
+uv run python scripts/login_interactive.py
 uv run notebooklm list
 ```
 

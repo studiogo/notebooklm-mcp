@@ -104,7 +104,7 @@ async def call_with_retry(fn):
         return await fn(client)
     except Exception as e:
         msg = str(e).lower()
-        is_auth = any(x in msg for x in ("auth", "expired", "401", "403", "redirect", "signin", "login"))
+        is_auth = any(x in msg for x in ("auth", "expired", "401", "403", "redirect", "signin", "login", "null result", "null data", "rpc"))
         if not is_auth:
             raise
         logger.warning(f"Auth-like error, refreshing: {e}")
