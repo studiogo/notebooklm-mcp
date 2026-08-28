@@ -206,4 +206,4 @@ Zasady rozmowy: [Kodeks postępowania](CODE_OF_CONDUCT.md).
 
 ---
 
-**Autor forka:** [Łukasz Hodorowicz](https://lukaszhodorowicz.pl) — [Ogarniam AI](https://ogarniamai.pl)
+**Autor forka:** [Łukasz Hodorowicz](https://lukaszhodorowicz.pl)
