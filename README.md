@@ -1,5 +1,10 @@
 # NotebookLM MCP — Claude Code, Claude Desktop, Cursor, Cline, Continue
 
+[![Licencja MIT](https://img.shields.io/badge/licencja-MIT-blue.svg)](LICENSE)
+[![Ostatnia zmiana](https://img.shields.io/github/last-commit/studiogo/notebooklm-mcp)](https://github.com/studiogo/notebooklm-mcp/commits/main)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
+[![MCP](https://img.shields.io/badge/MCP-server-orange.svg)](https://modelcontextprotocol.io)
+
 > Sterowanie Google NotebookLM z dowolnego klienta MCP. **Zero ręcznego loginu** — wykorzystuje sesję Twojego Chrome'a.
 >
 > Fork [alfredang/notebooklm-mcp](https://github.com/alfredang/notebooklm-mcp) z 12 dodatkowymi narzędziami, auto-refresh cookies i naprawami zgodności z `notebooklm-py>=0.3.4`.
@@ -185,9 +190,19 @@ Cookies normalnie żyją tygodniami.
 - **Pakiet pod spodem:** [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) — reverse-engineered klient NotebookLM RPC
 - **Cookies bypass:** [borisbabic/browser_cookie3](https://github.com/borisbabic/browser_cookie3)
 
+---
+
+## Zgłoszenia i zmiany
+
+Znalazłeś błąd albo masz pomysł na narzędzie: [otwórz zgłoszenie](https://github.com/studiogo/notebooklm-mcp/issues/new/choose). Zanim to zrobisz, przejdź cztery kroki z [CONTRIBUTING.md](CONTRIBUTING.md) — połowa usterek to nieświeże ciasteczka albo stara wersja `notebooklm-py`.
+
+W zgłoszeniu nie wklejaj ciasteczek, tokenów ani zawartości `.env`.
+
+Zasady rozmowy: [Kodeks postępowania](CODE_OF_CONDUCT.md).
+
 ## Licencja
 
-[MIT](LICENSE) — bezpłatne komercyjne i prywatne użytkowanie.
+[MIT](LICENSE) — bezpłatne komercyjne i prywatne użytkowanie. Plik licencji zawiera też informację o pochodzeniu forka.
 
 ---
 
