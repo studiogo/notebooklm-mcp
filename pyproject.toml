@@ -8,7 +8,7 @@ authors = [{name = "Łukasz Hodorowicz"}]
 requires-python = ">=3.13"
 dependencies = [
     "browser-cookie3>=0.20.1",
-    "fastmcp>=2.14.4",
+    "fastmcp>=3.4.10",
     "notebooklm-py[browser]>=0.3.4",
 ]
 
